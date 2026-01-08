@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 $Timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $BackupDir = ".\backups"
 $BackupName = "backup_$Timestamp"
-$ContainerName = "company_profile_db"
+$ContainerDb = "company_profile_db"
 $DbName = "company_profile"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 
@@ -25,8 +25,13 @@ if (-not (Test-Path $BackupDir)) {
 
 # 1. Backup Database
 Write-Host "[1/3] Backing up database..." -ForegroundColor Yellow
-docker exec $ContainerName pg_dump -U postgres $DbName | Out-File -FilePath "$BackupDir\database.sql" -Encoding UTF8
-Write-Host "      Done - Database backed up" -ForegroundColor Green
+try {
+    docker exec $ContainerDb pg_dump -U postgres $DbName | Out-File -FilePath "$BackupDir\database.sql" -Encoding UTF8
+    Write-Host "      Done - Database backed up" -ForegroundColor Green
+}
+catch {
+    Write-Host "      Warning - Could not backup database (container may not be running)" -ForegroundColor Yellow
+}
 
 # 2. Backup Uploads folder
 Write-Host "[2/3] Backing up uploads..." -ForegroundColor Yellow

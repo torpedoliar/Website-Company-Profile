@@ -1,16 +1,20 @@
-# Simple development Dockerfile
+# ===========================================
+# Company Profile Website - Dockerfile
+# ===========================================
+# Single-stage build for simpler deployment
+
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Install openssl for Prisma
-RUN apk add --no-cache openssl libc6-compat
+# Install dependencies
+RUN apk add --no-cache openssl libc6-compat wget
 
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -19,15 +23,24 @@ COPY . .
 RUN npx prisma generate
 
 # Build the app
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
-
-# Expose port
-EXPOSE 3000
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start command with migration
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && npm start"]
+# Create uploads directory
+RUN mkdir -p /app/public/uploads
+
+# Expose port
+EXPOSE 3000
+
+# Copy and make entrypoint executable
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# Start with entrypoint
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["npm", "start"]

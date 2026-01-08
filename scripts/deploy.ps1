@@ -32,38 +32,31 @@ catch {
     exit 1
 }
 
+Set-Location $ProjectRoot
+
 # Check if already running
 $containers = docker ps --format "{{.Names}}" 2>$null
-if ($containers -match "company_profile") {
+if ($containers -match "company-profile") {
     Write-Host ""
     $confirm = Read-Host "Container sudah berjalan. Stop dan rebuild? (y/n)"
     if ($confirm -eq "y") {
         Write-Host "Stopping containers..." -ForegroundColor Yellow
-        Set-Location $ProjectRoot
-        docker-compose -f docker-compose.db.yml down
+        docker-compose -f docker-compose.production.yml down
     }
     else {
         Write-Host "Deploy dibatalkan." -ForegroundColor Yellow
         exit 0
     }
 }
-else {
-    Set-Location $ProjectRoot
-}
 
 Write-Host ""
-Write-Host "[1/3] Starting database container..." -ForegroundColor Yellow
-docker-compose -f docker-compose.db.yml up -d
+Write-Host "[1/2] Building and starting containers..." -ForegroundColor Yellow
+Write-Host "      This may take several minutes on first run..." -ForegroundColor Gray
+docker-compose -f docker-compose.production.yml up -d --build
 
 Write-Host ""
-Write-Host "[2/3] Waiting for database to be ready..." -ForegroundColor Yellow
-Start-Sleep -Seconds 15
-
-Write-Host ""
-Write-Host "[3/3] Running database migrations..." -ForegroundColor Yellow
-$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/company_profile"
-npx prisma db push
-npx tsx prisma/seed.ts
+Write-Host "[2/2] Waiting for services to be ready..." -ForegroundColor Yellow
+Start-Sleep -Seconds 30
 
 # Check status
 Write-Host ""
@@ -71,13 +64,18 @@ Write-Host "==========================================" -ForegroundColor Green
 Write-Host "  Deploy Complete!" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host ""
-docker-compose -f docker-compose.db.yml ps
+docker-compose -f docker-compose.production.yml ps
 Write-Host ""
-Write-Host "Start development server dengan: npm run dev" -ForegroundColor Cyan
+Write-Host "Akses aplikasi di: http://localhost:3100" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Default login:" -ForegroundColor White
 Write-Host "  Email: admin@example.com" -ForegroundColor Gray
 Write-Host "  Password: admin123" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Jangan lupa ganti password setelah login!" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "Commands:" -ForegroundColor White
+Write-Host "  docker-compose -f docker-compose.production.yml logs -f    # View logs" -ForegroundColor Gray
+Write-Host "  docker-compose -f docker-compose.production.yml down       # Stop" -ForegroundColor Gray
+Write-Host "  docker-compose -f docker-compose.production.yml restart    # Restart" -ForegroundColor Gray
 Write-Host ""

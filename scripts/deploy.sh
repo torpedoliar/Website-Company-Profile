@@ -2,7 +2,7 @@
 # ===========================================
 # DEPLOY SCRIPT - Company Profile Website
 # ===========================================
-# Jalankan di server baru: ./deploy.sh
+# Jalankan di server: ./deploy.sh
 
 set -e
 
@@ -25,32 +25,27 @@ fi
 echo "✓ Docker detected"
 
 # Check if already running
-if docker ps | grep -q "company_profile"; then
+if docker ps | grep -q "company-profile"; then
     echo ""
     read -p "Container sudah berjalan. Stop dan rebuild? (y/n): " confirm
     if [ "$confirm" = "y" ]; then
         echo "Stopping containers..."
-        docker-compose -f docker-compose.db.yml down
+        docker-compose -f docker-compose.production.yml down
     else
         echo "Deploy dibatalkan."
         exit 0
     fi
 fi
 
-# Start database
+# Build and start
 echo ""
-echo "[1/3] Starting database container..."
-docker-compose -f docker-compose.db.yml up -d
+echo "[1/2] Building and starting containers..."
+echo "      This may take several minutes on first run..."
+docker-compose -f docker-compose.production.yml up -d --build
 
 echo ""
-echo "[2/3] Waiting for database to be ready..."
-sleep 15
-
-# Run migrations
-echo ""
-echo "[3/3] Running database migrations..."
-npx prisma db push
-npx tsx prisma/seed.ts
+echo "[2/2] Waiting for services to be ready..."
+sleep 30
 
 # Check status
 echo ""
@@ -58,13 +53,18 @@ echo "=========================================="
 echo "  ✓ Deploy Complete!"
 echo "=========================================="
 echo ""
-docker-compose -f docker-compose.db.yml ps
+docker-compose -f docker-compose.production.yml ps
 echo ""
-echo "Start development server dengan: npm run dev"
+echo "Akses aplikasi di: http://$(hostname -I | awk '{print $1}'):3100"
 echo ""
 echo "Default login:"
 echo "  Email: admin@example.com"
 echo "  Password: admin123"
 echo ""
 echo "⚠️  Jangan lupa ganti password setelah login!"
+echo ""
+echo "Commands:"
+echo "  docker-compose -f docker-compose.production.yml logs -f    # View logs"
+echo "  docker-compose -f docker-compose.production.yml down       # Stop"
+echo "  docker-compose -f docker-compose.production.yml restart    # Restart"
 echo ""

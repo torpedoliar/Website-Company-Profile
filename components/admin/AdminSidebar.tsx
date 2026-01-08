@@ -70,6 +70,8 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
 
     const navItems = [
         { href: "/admin", icon: FiHome, label: "DASHBOARD" },
+        { href: "/admin/homepage", icon: FiMonitor, label: "BERANDA" },
+        { href: "/admin/product-logos", icon: FiImage, label: "LOGO PRODUK" },
         { href: "/admin/announcements", icon: FiFileText, label: "PENGUMUMAN" },
         { href: "/admin/categories", icon: FiTag, label: "KATEGORI" },
         { href: "/admin/media", icon: FiImage, label: "MEDIA" },

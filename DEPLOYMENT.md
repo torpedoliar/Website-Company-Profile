@@ -1,11 +1,11 @@
-# Deployment Guide - Announcement Dashboard
+# Deployment Guide - Company Profile Website
 
 ## 🚀 Quick Start (Server Baru)
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/torpedoliar/Anouncement-Dashboard-Local.git
-cd Anouncement-Dashboard-Local
+git clone https://github.com/torpedoliar/Website-Company-Profile.git
+cd Website-Company-Profile
 
 # 2. Deploy
 chmod +x scripts/deploy.sh

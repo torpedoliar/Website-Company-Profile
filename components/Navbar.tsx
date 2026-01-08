@@ -46,8 +46,13 @@ export default function Navbar({ logoPath, siteName = "Santos Jaya Abadi" }: Nav
 
     const navLinks = [
         { href: "/", label: "BERANDA" },
+        { href: "/tentang", label: "TENTANG" },
+        { href: "/produk", label: "PRODUK" },
+        { href: "/karir", label: "KARIR" },
+        { href: "/responsibilitas", label: "RESPONSIBILITAS" },
         { href: "/#news", label: "BERITA" },
-        { href: "/search", label: "PENCARIAN" },
+        { href: "/kontak", label: "KONTAK" },
+        { href: "/b2b", label: "B2B" },
     ];
 
     return (

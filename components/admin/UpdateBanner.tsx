@@ -12,7 +12,7 @@ interface UpdateInfo {
     error?: string;
 }
 
-const GITHUB_VERSION_URL = "https://raw.githubusercontent.com/torpedoliar/Anouncement-Dashboard-Local/main/version.json";
+const GITHUB_VERSION_URL = "https://raw.githubusercontent.com/torpedoliar/Website-Company-Profile/main/version.json";
 
 // Compare semver versions: returns 1 if a > b, -1 if a < b, 0 if equal
 function compareVersions(a: string, b: string): number {
@@ -192,7 +192,7 @@ export default function UpdateBanner() {
                 </button>
 
                 <a
-                    href="https://github.com/torpedoliar/Anouncement-Dashboard-Local"
+                    href="https://github.com/torpedoliar/Website-Company-Profile"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{

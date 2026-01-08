@@ -1,7 +1,7 @@
 {
-    "version": "2.3.1",
+    "version": "1.0.0",
     "buildDate": "2026-01-08",
-    "schemaVersion": "6",
-    "releaseNotes": "Fix: Media Library buttons no longer trigger form validation popup",
-    "repository": "https://github.com/torpedoliar/Anouncement-Dashboard-Local"
+    "schemaVersion": "1",
+    "releaseNotes": "Initial release: Homepage redesign with Kapal Api Global style - Hero section, Pin Article section, Product Logo Slider, Secondary Article section, Corporate section, Articles Carousel",
+    "repository": "https://github.com/torpedoliar/Website-Company-Profile"
 }

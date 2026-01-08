@@ -235,6 +235,76 @@ async function main() {
     }
     console.log("✅ Created email templates");
 
+    // Create homepage sections
+    const homepageSections = [
+        {
+            pageSlug: "beranda",
+            sectionKey: "pin_main",
+            sectionType: "pin_article",
+            title: "Kapal Api Global",
+            content: "didistribusikan lebih dari 100 produk ke 68 negara.",
+            buttonText: "Selengkapnya",
+            buttonUrl: "/tentang",
+            order: 0,
+        },
+        {
+            pageSlug: "beranda",
+            sectionKey: "secondary",
+            sectionType: "text_image",
+            title: "Nikmati Perjalanan Kami",
+            subtitle: "TENTANG KAMI",
+            content: "Sejak 1927, kami telah berkomitmen untuk menyajikan kopi berkualitas tinggi.",
+            buttonText: "Selengkapnya",
+            buttonUrl: "/tentang",
+            backgroundColor: "#dc2626",
+            layout: "left",
+            order: 1,
+        },
+        {
+            pageSlug: "beranda",
+            sectionKey: "corporate",
+            sectionType: "full_image",
+            title: "Corporate Shared Value",
+            subtitle: "SUSTAINABILITY",
+            order: 2,
+        },
+    ];
+
+    for (const section of homepageSections) {
+        await prisma.pageSection.upsert({
+            where: {
+                pageSlug_sectionKey: {
+                    pageSlug: section.pageSlug,
+                    sectionKey: section.sectionKey,
+                },
+            },
+            update: section,
+            create: section,
+        });
+    }
+    console.log("✅ Created homepage sections");
+
+    // Create product logos
+    const productLogos = [
+        { name: "Kapal Api", logoPath: "/uploads/logos/kapal-api.png", order: 0 },
+        { name: "ABC", logoPath: "/uploads/logos/abc.png", order: 1 },
+        { name: "Good Day", logoPath: "/uploads/logos/good-day.png", order: 2 },
+        { name: "Excelso", logoPath: "/uploads/logos/excelso.png", order: 3 },
+        { name: "Luwak", logoPath: "/uploads/logos/luwak.png", order: 4 },
+    ];
+
+    for (const logo of productLogos) {
+        const existingLogo = await prisma.productLogo.findFirst({
+            where: { name: logo.name },
+        });
+        if (!existingLogo) {
+            await prisma.productLogo.create({
+                data: logo,
+            });
+        }
+    }
+    console.log("✅ Created product logos");
+
     console.log("🎉 Database seeding completed!");
 }
 

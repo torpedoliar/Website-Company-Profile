@@ -86,6 +86,9 @@ model Announcement {
   authorId String?
   author   User?   @relation(fields: [authorId], references: [id])
 
+  // Homepage sections that pin this announcement
+  pinnedInSections PageSection[]
+
   @@index([categoryId])
   @@index([isPublished, createdAt])
   @@index([isPublished, isHero])
@@ -405,4 +408,64 @@ model EmailSettings {
   updatedAt DateTime @updatedAt
 
   @@map("email_settings")
+}
+
+// ============================================
+// HOMEPAGE & MULTI-PAGE CONTENT MANAGEMENT
+// ============================================
+
+// Reusable Page Section for any page
+model PageSection {
+  id          String   @id @default(cuid())
+  pageSlug    String   // "beranda", "tentang", "produk", etc.
+  sectionKey  String   // unique identifier within page
+  sectionType String   // "hero", "pin_article", "text_image", "full_image", "carousel"
+  
+  // Content fields
+  title       String?
+  subtitle    String?
+  content     String?
+  buttonText  String?
+  buttonUrl   String?
+  
+  // Media
+  imagePath   String?
+  imagePath2  String?  // For 2-column layouts
+  videoPath   String?
+  videoType   String?  // "upload" | "youtube"
+  youtubeUrl  String?
+  
+  // Styling
+  backgroundColor String?  // hex color
+  textColor       String?
+  layout          String?  // "left", "right", "center", "split"
+  
+  // Configuration
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  
+  // For pinned article
+  pinnedAnnouncementId String?
+  pinnedAnnouncement   Announcement? @relation(fields: [pinnedAnnouncementId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([pageSlug, sectionKey])
+  @@index([pageSlug, order])
+  @@map("page_sections")
+}
+
+// Product logos for slider
+model ProductLogo {
+  id        String   @id @default(cuid())
+  name      String
+  logoPath  String
+  linkUrl   String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("product_logos")
 }

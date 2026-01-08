@@ -1,13 +1,12 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
-import AnnouncementCard from "@/components/AnnouncementCard";
-import { CategoryFilterClient } from "@/components/CategoryFilter";
-import SearchBar from "@/components/SearchBar";
+import PinArticleSection from "@/components/PinArticleSection";
+import ProductLogoSlider from "@/components/ProductLogoSlider";
+import TextImageSection from "@/components/TextImageSection";
+import FullImageSection from "@/components/FullImageSection";
+import ArticlesCarousel from "@/components/ArticlesCarousel";
 import Footer from "@/components/Footer";
-import Pagination from "@/components/Pagination";
 import prisma from "@/lib/prisma";
-
-const ITEMS_PER_PAGE = 9;
 
 async function getHeroAnnouncements() {
   return prisma.announcement.findMany({
@@ -27,189 +26,123 @@ async function getHeroAnnouncements() {
   });
 }
 
-async function getAnnouncements(categorySlug?: string, page: number = 1) {
-  const skip = (page - 1) * ITEMS_PER_PAGE;
-
-  const where = {
-    isPublished: true,
-    ...(categorySlug && { category: { slug: categorySlug } }),
-  };
-
-  const [announcements, total] = await Promise.all([
-    prisma.announcement.findMany({
-      where,
-      orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
-      skip,
-      take: ITEMS_PER_PAGE,
-      include: { category: { select: { name: true, color: true, slug: true } } },
-    }),
-    prisma.announcement.count({ where }),
-  ]);
-
-  return {
-    announcements,
-    total,
-    totalPages: Math.ceil(total / ITEMS_PER_PAGE),
-  };
+async function getPageSections() {
+  try {
+    return await prisma.pageSection.findMany({
+      where: {
+        pageSlug: "beranda",
+        isActive: true,
+      },
+      include: {
+        pinnedAnnouncement: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            excerpt: true,
+            imagePath: true,
+          },
+        },
+      },
+      orderBy: { order: "asc" },
+    });
+  } catch {
+    // Table might not exist yet
+    return [];
+  }
 }
 
-async function getCategories() {
-  return prisma.category.findMany({ orderBy: { order: "asc" } });
+async function getProductLogos() {
+  try {
+    return await prisma.productLogo.findMany({
+      where: { isActive: true },
+      orderBy: { order: "asc" },
+    });
+  } catch {
+    // Table might not exist yet
+    return [];
+  }
 }
 
 async function getSettings() {
   return prisma.settings.findFirst();
 }
 
-export default async function HomePage({
-  searchParams: searchParamsPromise,
-}: {
-  searchParams: Promise<{ category?: string; page?: string }>;
-}) {
-  const searchParams = await searchParamsPromise;
-  const categorySlug = searchParams.category;
-  const currentPage = parseInt(searchParams.page || "1");
-
-  const [heroAnnouncements, announcementData, categories, settings] = await Promise.all([
+export default async function HomePage() {
+  const [heroAnnouncements, sections, logos, settings] = await Promise.all([
     getHeroAnnouncements(),
-    getAnnouncements(categorySlug, currentPage),
-    getCategories(),
+    getPageSections(),
+    getProductLogos(),
     getSettings(),
   ]);
 
-  const { announcements, totalPages } = announcementData;
-
-  // Find active category name for empty state message
-  const activeCategory = categorySlug
-    ? categories.find((c: typeof categories[0]) => c.slug === categorySlug)?.name
-    : null;
-
-  // Build search params for pagination
-  const paginationParams: Record<string, string> = {};
-  if (categorySlug) paginationParams.category = categorySlug;
+  // Find specific sections
+  const pinMainSection = sections.find((s) => s.sectionKey === "pin_main");
+  const secondarySection = sections.find((s) => s.sectionKey === "secondary");
+  const corporateSection = sections.find((s) => s.sectionKey === "corporate");
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: '#000' }}>
+    <main style={{ minHeight: "100vh", backgroundColor: "#000" }}>
       <Navbar
         logoPath={settings?.logoPath || undefined}
         siteName={settings?.siteName || "Santos Jaya Abadi"}
       />
 
+      {/* 1. Hero Section */}
       <HeroSection
         announcements={heroAnnouncements}
-        heroTitle={settings?.heroTitle || "BERITA & PENGUMUMAN"}
-        heroSubtitle={settings?.heroSubtitle || "Informasi terbaru dari perusahaan"}
+        heroTitle={settings?.heroTitle || "Melestarikan warisan untuk memperkuat masa depan"}
+        heroSubtitle={settings?.heroSubtitle || ""}
         heroImage={settings?.heroImage}
       />
 
-      {/* News Section */}
-      <section id="news" style={{ padding: '96px 0', backgroundColor: '#000' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
-          {/* Section Header */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '32px',
-            marginBottom: '64px',
-          }}>
-            <div>
-              <p style={{
-                color: '#dc2626',
-                fontSize: '12px',
-                fontWeight: 600,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                marginBottom: '8px',
-              }}>
-                AKTIVITAS PERUSAHAAN
-              </p>
-              <h2 style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: 'clamp(24px, 4vw, 36px)',
-                fontWeight: 700,
-                color: '#fff',
-              }}>
-                Berita & Artikel Terbaru
-              </h2>
-            </div>
+      {/* 2. Pin Main Beranda - Featured Article */}
+      <PinArticleSection
+        title={pinMainSection?.title || "Kapal Api Global"}
+        subtitle={pinMainSection?.subtitle}
+        content={pinMainSection?.content || "didistribusikan lebih dari 100 produk ke 68 negara."}
+        imagePath={pinMainSection?.imagePath || undefined}
+        buttonText={pinMainSection?.buttonText || "Selengkapnya"}
+        buttonUrl={pinMainSection?.buttonUrl || undefined}
+        pinnedArticle={pinMainSection?.pinnedAnnouncement ? {
+          title: pinMainSection.pinnedAnnouncement.title,
+          slug: pinMainSection.pinnedAnnouncement.slug,
+          excerpt: pinMainSection.pinnedAnnouncement.excerpt || undefined,
+          imagePath: pinMainSection.pinnedAnnouncement.imagePath || undefined,
+        } : undefined}
+      />
 
-            <div style={{ maxWidth: '480px' }}>
-              <SearchBar placeholder="Cari pengumuman..." />
-            </div>
-          </div>
+      {/* 3. Product Logo Slider */}
+      <ProductLogoSlider logos={logos} />
 
-          {/* Category Filter */}
-          <div style={{ marginBottom: '48px' }}>
-            <CategoryFilterClient categories={categories} activeCategory={categorySlug || "all"} />
-          </div>
+      {/* 4. Secondary Article Section - "Nikmati Perjalanan Kami" */}
+      <TextImageSection
+        title={secondarySection?.title || "Nikmati Perjalanan Kami"}
+        subtitle={secondarySection?.subtitle}
+        content={secondarySection?.content || undefined}
+        buttonText={secondarySection?.buttonText || "Selengkapnya"}
+        buttonUrl={secondarySection?.buttonUrl || "#"}
+        imagePath={secondarySection?.imagePath || undefined}
+        imagePath2={secondarySection?.imagePath2 || undefined}
+        layout={(secondarySection?.layout as "left" | "right") || "left"}
+        backgroundColor={secondarySection?.backgroundColor || "#dc2626"}
+      />
 
-          {/* Announcements Grid */}
-          {announcements.length > 0 ? (
-            <>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                gap: '32px',
-              }}>
-                {announcements.map((announcement: typeof announcements[0], index: number) => (
-                  <div
-                    key={announcement.id}
-                    className="animate-slide-up"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <AnnouncementCard
-                      id={announcement.id}
-                      title={announcement.title}
-                      excerpt={announcement.excerpt || undefined}
-                      slug={announcement.slug}
-                      imagePath={announcement.imagePath || undefined}
-                      videoPath={announcement.videoPath}
-                      videoType={announcement.videoType}
-                      youtubeUrl={announcement.youtubeUrl}
-                      category={announcement.category}
-                      createdAt={announcement.createdAt}
-                      viewCount={announcement.viewCount}
-                      isPinned={announcement.isPinned}
-                    />
-                  </div>
-                ))}
-              </div>
+      {/* 5. Corporate Section - "Corporate Shared Value" */}
+      <FullImageSection
+        title={corporateSection?.title || "Corporate Shared Value"}
+        subtitle={corporateSection?.subtitle}
+        imagePath={corporateSection?.imagePath || undefined}
+      />
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  baseUrl="/"
-                  searchParams={paginationParams}
-                />
-              )}
-            </>
-          ) : (
-            <div style={{
-              textAlign: 'center',
-              padding: '80px 0',
-              backgroundColor: '#0a0a0a',
-              border: '1px solid #1a1a1a',
-            }}>
-              <p style={{ color: '#525252', fontSize: '18px', marginBottom: '8px' }}>
-                {activeCategory
-                  ? `Belum ada artikel di kategori "${activeCategory}".`
-                  : 'Belum ada pengumuman yang dipublikasikan.'}
-              </p>
-              {activeCategory && (
-                <a
-                  href="/"
-                  style={{ color: '#dc2626', fontSize: '14px' }}
-                >
-                  Lihat semua artikel →
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
+      {/* 6. Articles Carousel - "Aktivitas Perusahaan" */}
+      <ArticlesCarousel
+        title="Aktivitas Perusahaan"
+        subtitle="BERITA TERBARU"
+        limit={6}
+      />
 
+      {/* 7. Footer */}
       <Footer />
     </main>
   );

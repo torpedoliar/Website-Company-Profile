@@ -1,9 +1,13 @@
 # ===========================================
-# RESTORE FULL SCRIPT - Announcement Dashboard
+# RESTORE FULL SCRIPT - Company Profile Website
 # ===========================================
 # Jalankan dari folder hasil extract: .\restore-full.ps1
 
 $ErrorActionPreference = "Continue"
+
+$ContainerDb = "company_profile_db"
+$ContainerWeb = "company-profile-web"
+$DbName = "company_profile"
 
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "  Restore Full Backup" -ForegroundColor Cyan
@@ -11,8 +15,8 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Check required files
-if (-not (Test-Path "docker-compose.yml")) {
-  Write-Host "Error: docker-compose.yml not found!" -ForegroundColor Red
+if (-not (Test-Path "docker-compose.db.yml") -and -not (Test-Path "docker-compose.yml")) {
+  Write-Host "Error: docker-compose file not found!" -ForegroundColor Red
   Write-Host "Make sure you run this from the extracted backup folder." -ForegroundColor Yellow
   exit 1
 }
@@ -40,43 +44,31 @@ Write-Host "[2/6] Configuring docker-compose..." -ForegroundColor Yellow
 
 # Create new docker-compose for restore (use image, not build)
 $dockerCompose = @"
-services:
-  web:
-    image: announcement-dashboard-web:latest
-    ports:
-      - "3100:3000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/announcement_db?schema=public
-      - NEXTAUTH_SECRET=your-secret-key-change-in-production
-      - NEXTAUTH_URL=http://localhost:3100
-    volumes:
-      - ./public/uploads:/app/public/uploads
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
+version: '3.8'
 
+services:
   db:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
+    container_name: company_profile_db
+    restart: unless-stopped
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=announcement_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: company_profile
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
 volumes:
   postgres_data:
 "@
-$dockerCompose | Out-File -FilePath "docker-compose.yml" -Encoding UTF8
+$dockerCompose | Out-File -FilePath "docker-compose.db.yml" -Encoding UTF8
 Write-Host "      Done - docker-compose configured" -ForegroundColor Green
 
 # 3. Create uploads directory
@@ -88,8 +80,8 @@ Write-Host "      Done" -ForegroundColor Green
 
 # 4. Start containers
 Write-Host "[4/6] Starting containers..." -ForegroundColor Yellow
-docker-compose down 2>$null
-docker-compose up -d 2>$null
+docker-compose -f docker-compose.db.yml down 2>$null
+docker-compose -f docker-compose.db.yml up -d 2>$null
 Write-Host "      Waiting for database to be ready..." -ForegroundColor Gray
 Start-Sleep -Seconds 20
 Write-Host "      Done - Containers started" -ForegroundColor Green
@@ -97,28 +89,22 @@ Write-Host "      Done - Containers started" -ForegroundColor Green
 # 5. Restore database
 Write-Host "[5/6] Restoring database..." -ForegroundColor Yellow
 
-# Run prisma migration first to ensure schema exists
-Write-Host "      Running database migration..." -ForegroundColor Gray
-docker exec announcement-dashboard-web-1 npx prisma db push --accept-data-loss 2>$null
-
 if (Test-Path "database.sql") {
   # Check if database.sql has actual data
   $sqlContent = Get-Content "database.sql" -Raw
   if ($sqlContent.Length -gt 100) {
     Write-Host "      Restoring data from backup..." -ForegroundColor Gray
-    $sqlContent | docker exec -i announcement-dashboard-db-1 psql -U postgres announcement_db 2>$null
+    $sqlContent | docker exec -i $ContainerDb psql -U postgres $DbName 2>$null
     Write-Host "      Done - Database restored from backup" -ForegroundColor Green
   }
   else {
-    Write-Host "      Backup file is empty, seeding default data..." -ForegroundColor Yellow
-    docker exec announcement-dashboard-web-1 npx prisma db seed 2>$null
-    Write-Host "      Done - Database seeded with default data" -ForegroundColor Green
+    Write-Host "      Backup file is empty, run prisma seed manually..." -ForegroundColor Yellow
+    Write-Host "      Done - Run 'npx tsx prisma/seed.ts' to seed data" -ForegroundColor Green
   }
 }
 else {
-  Write-Host "      No backup found, seeding default data..." -ForegroundColor Yellow
-  docker exec announcement-dashboard-web-1 npx prisma db seed 2>$null
-  Write-Host "      Done - Database seeded with default data" -ForegroundColor Green
+  Write-Host "      No backup found, run prisma seed manually..." -ForegroundColor Yellow
+  Write-Host "      Done - Run 'npx tsx prisma/seed.ts' to seed data" -ForegroundColor Green
 }
 
 # 6. Restore uploads
@@ -137,9 +123,9 @@ Write-Host "  Restore Complete!" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Container status:" -ForegroundColor White
-docker-compose ps
+docker-compose -f docker-compose.db.yml ps
 Write-Host ""
-Write-Host "Akses aplikasi di: http://localhost:3100" -ForegroundColor Cyan
+Write-Host "Akses aplikasi di: http://localhost:3000" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Default login:" -ForegroundColor White
 Write-Host "  Email: admin@example.com" -ForegroundColor Gray

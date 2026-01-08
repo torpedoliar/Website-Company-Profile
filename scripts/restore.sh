@@ -1,11 +1,13 @@
 #!/bin/bash
 # ===========================================
-# RESTORE SCRIPT - Announcement Dashboard
+# RESTORE SCRIPT - Company Profile Website
 # ===========================================
 # Jalankan: ./restore.sh backup_YYYY-MM-DD_HH-MM-SS.tar.gz
-# 
 
 set -e
+
+CONTAINER_DB="company_profile_db"
+DB_NAME="company_profile"
 
 if [ -z "$1" ]; then
     echo "Usage: ./restore.sh <backup_file.tar.gz>"
@@ -22,7 +24,7 @@ if [ ! -f "$BACKUP_FILE" ]; then
 fi
 
 echo "=========================================="
-echo "  Restore Announcement Dashboard"
+echo "  Restore Company Profile Website"
 echo "=========================================="
 echo "Backup: $BACKUP_FILE"
 echo ""
@@ -43,9 +45,9 @@ echo "      ✓ Backup extracted"
 
 # Check if containers are running
 echo "[2/4] Checking Docker containers..."
-if ! docker ps | grep -q "announcement-dashboard-db-1"; then
+if ! docker ps | grep -q "$CONTAINER_DB"; then
     echo "      Starting containers..."
-    docker-compose up -d
+    docker-compose -f docker-compose.db.yml up -d
     echo "      Waiting for database to be ready..."
     sleep 10
 fi
@@ -53,7 +55,7 @@ echo "      ✓ Containers running"
 
 # Restore database
 echo "[3/4] Restoring database..."
-cat "${RESTORE_DIR}/database.sql" | docker exec -i announcement-dashboard-db-1 psql -U postgres announcement_db
+cat "${RESTORE_DIR}/database.sql" | docker exec -i $CONTAINER_DB psql -U postgres $DB_NAME
 echo "      ✓ Database restored"
 
 # Restore uploads
@@ -74,5 +76,5 @@ echo "=========================================="
 echo "  ✓ Restore Complete!"
 echo "=========================================="
 echo ""
-echo "Akses aplikasi di: http://localhost:3100"
+echo "Akses aplikasi di: http://localhost:3000"
 echo ""

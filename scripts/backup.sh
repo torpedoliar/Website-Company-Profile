@@ -1,6 +1,6 @@
 #!/bin/bash
 # ===========================================
-# BACKUP SCRIPT - Announcement Dashboard
+# BACKUP SCRIPT - Company Profile Website
 # ===========================================
 # Jalankan: ./backup.sh
 # Output: backup_YYYY-MM-DD_HH-MM-SS.tar.gz
@@ -10,9 +10,11 @@ set -e
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 BACKUP_DIR="./backups"
 BACKUP_NAME="backup_${TIMESTAMP}"
+CONTAINER_NAME="company_profile_db"
+DB_NAME="company_profile"
 
 echo "=========================================="
-echo "  Backup Announcement Dashboard"
+echo "  Backup Company Profile Website"
 echo "=========================================="
 
 # Create backup directory
@@ -20,7 +22,7 @@ mkdir -p $BACKUP_DIR
 
 # 1. Backup Database
 echo "[1/3] Backing up database..."
-docker exec announcement-dashboard-db-1 pg_dump -U postgres announcement_db > "${BACKUP_DIR}/database.sql"
+docker exec $CONTAINER_NAME pg_dump -U postgres $DB_NAME > "${BACKUP_DIR}/database.sql"
 echo "      ✓ Database backed up"
 
 # 2. Backup Uploads folder

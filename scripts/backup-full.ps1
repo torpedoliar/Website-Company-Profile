@@ -1,5 +1,5 @@
 # ===========================================
-# FULL BACKUP SCRIPT - Announcement Dashboard
+# FULL BACKUP SCRIPT - Company Profile Website
 # ===========================================
 # Backup keseluruhan: Docker images + Database + Uploads + Config
 # Jalankan dari folder scripts: .\backup-full.ps1
@@ -11,9 +11,12 @@ $Timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $BackupDir = ".\full_backup_temp"
 $BackupName = "full_backup_$Timestamp"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+$ContainerDb = "company_profile_db"
+$ContainerWeb = "company-profile-web"
+$DbName = "company_profile"
 
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "  Full Backup - Announcement Dashboard" -ForegroundColor Cyan
+Write-Host "  Full Backup - Company Profile Website" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Backup includes:" -ForegroundColor White
@@ -34,7 +37,7 @@ Write-Host "[1/5] Exporting Docker images..." -ForegroundColor Yellow
 Write-Host "      This may take several minutes..." -ForegroundColor Gray
 
 try {
-    docker save announcement-dashboard-web -o "$BackupDir\web_image.tar" 2>$null
+    docker save $ContainerWeb -o "$BackupDir\web_image.tar" 2>$null
     Write-Host "      Done - Web image exported" -ForegroundColor Green
 }
 catch {
@@ -42,7 +45,7 @@ catch {
 }
 
 try {
-    docker save postgres:16-alpine -o "$BackupDir\db_image.tar" 2>$null
+    docker save postgres:15-alpine -o "$BackupDir\db_image.tar" 2>$null
     Write-Host "      Done - DB image exported" -ForegroundColor Green
 }
 catch {
@@ -52,7 +55,7 @@ catch {
 # 2. Backup Database
 Write-Host "[2/5] Backing up database..." -ForegroundColor Yellow
 try {
-    $dbDump = docker exec announcement-dashboard-db-1 pg_dump -U postgres announcement_db 2>$null
+    $dbDump = docker exec $ContainerDb pg_dump -U postgres $DbName 2>$null
     $dbDump | Out-File -FilePath "$BackupDir\database.sql" -Encoding UTF8
     Write-Host "      Done - Database backed up" -ForegroundColor Green
 }
@@ -74,7 +77,7 @@ else {
 
 # 4. Copy config files
 Write-Host "[4/5] Backing up configuration..." -ForegroundColor Yellow
-$configFiles = @("docker-compose.yml", "docker-entrypoint.sh", "version.json", ".env", "Dockerfile")
+$configFiles = @("docker-compose.yml", "docker-compose.db.yml", "docker-entrypoint.sh", "version.json", ".env", "Dockerfile")
 foreach ($file in $configFiles) {
     $filePath = Join-Path $ProjectRoot $file
     if (Test-Path $filePath) {

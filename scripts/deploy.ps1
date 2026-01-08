@@ -1,12 +1,13 @@
 # ===========================================
-# DEPLOY SCRIPT - Announcement Dashboard
+# DEPLOY SCRIPT - Company Profile Website
 # ===========================================
 # Jalankan: .\deploy.ps1
 
 $ErrorActionPreference = "Stop"
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
 
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "  Deploy Announcement Dashboard" -ForegroundColor Cyan
+Write-Host "  Deploy Company Profile Website" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -33,13 +34,13 @@ catch {
 
 # Check if already running
 $containers = docker ps --format "{{.Names}}" 2>$null
-if ($containers -match "announcement-dashboard") {
+if ($containers -match "company_profile") {
     Write-Host ""
     $confirm = Read-Host "Container sudah berjalan. Stop dan rebuild? (y/n)"
     if ($confirm -eq "y") {
         Write-Host "Stopping containers..." -ForegroundColor Yellow
-        Set-Location ..
-        docker-compose down
+        Set-Location $ProjectRoot
+        docker-compose -f docker-compose.db.yml down
     }
     else {
         Write-Host "Deploy dibatalkan." -ForegroundColor Yellow
@@ -47,20 +48,22 @@ if ($containers -match "announcement-dashboard") {
     }
 }
 else {
-    Set-Location ..
+    Set-Location $ProjectRoot
 }
 
 Write-Host ""
-Write-Host "[1/2] Building containers..." -ForegroundColor Yellow
-docker-compose build
+Write-Host "[1/3] Starting database container..." -ForegroundColor Yellow
+docker-compose -f docker-compose.db.yml up -d
 
 Write-Host ""
-Write-Host "[2/2] Starting containers..." -ForegroundColor Yellow
-docker-compose up -d
-
-Write-Host ""
-Write-Host "Waiting for services to be ready..." -ForegroundColor Yellow
+Write-Host "[2/3] Waiting for database to be ready..." -ForegroundColor Yellow
 Start-Sleep -Seconds 15
+
+Write-Host ""
+Write-Host "[3/3] Running database migrations..." -ForegroundColor Yellow
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/company_profile"
+npx prisma db push
+npx tsx prisma/seed.ts
 
 # Check status
 Write-Host ""
@@ -68,9 +71,9 @@ Write-Host "==========================================" -ForegroundColor Green
 Write-Host "  Deploy Complete!" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host ""
-docker-compose ps
+docker-compose -f docker-compose.db.yml ps
 Write-Host ""
-Write-Host "Akses aplikasi di: http://localhost:3100" -ForegroundColor Cyan
+Write-Host "Start development server dengan: npm run dev" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Default login:" -ForegroundColor White
 Write-Host "  Email: admin@example.com" -ForegroundColor Gray

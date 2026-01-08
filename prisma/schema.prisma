@@ -1,0 +1,408 @@
+// Prisma Schema for Announcement Dashboard
+// Santos Jaya Abadi themed Professional Dashboard
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  avatar       String?
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  activityLogs ActivityLog[]
+
+  // Feature Improvements Relations
+  announcements      Announcement[]
+  revisions          AnnouncementRevision[]
+  sessions           UserSession[]
+  moderatedComments  Comment[]
+  submittedApprovals ApprovalRequest[]      @relation("SubmittedBy")
+  reviewedApprovals  ApprovalRequest[]      @relation("ReviewedBy")
+
+  @@map("users")
+}
+
+model Category {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  slug          String         @unique
+  color         String         @default("#ED1C24")
+  order         Int            @default(0)
+  createdAt     DateTime       @default(now())
+  announcements Announcement[]
+
+  @@map("categories")
+}
+
+model Announcement {
+  id        String  @id @default(cuid())
+  title     String
+  slug      String  @unique
+  excerpt   String?
+  content   String
+  imagePath String?
+
+  // Video fields
+  videoPath   String? // Uploaded video file path
+  videoType   String? // "upload" | "youtube"
+  youtubeUrl  String? // YouTube video URL
+  isPinned    Boolean   @default(false)
+  isHero      Boolean   @default(false)
+  isPublished Boolean   @default(false)
+  scheduledAt DateTime?
+  takedownAt  DateTime?
+  viewCount   Int       @default(0)
+  wordCount   Int       @default(0) // NEW: for reading time calculation
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Draft auto-save fields
+  draftContent   String?
+  draftUpdatedAt DateTime?
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  // Analytics relation
+  analytics Analytics[]
+
+  // Feature Improvements Relations
+  revisions        AnnouncementRevision[]
+  comments         Comment[]
+  approvalRequests ApprovalRequest[]
+
+  // Author relation
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id])
+
+  @@index([categoryId])
+  @@index([isPublished, createdAt])
+  @@index([isPublished, isHero])
+  @@index([isPublished, isPinned])
+  @@index([scheduledAt])
+  @@index([takedownAt])
+  @@map("announcements")
+}
+
+model Settings {
+  id           Int     @id @default(1)
+  siteName     String  @default("Santos Jaya Abadi")
+  heroTitle    String  @default("Berita & Pengumuman")
+  heroSubtitle String  @default("Informasi terbaru dari perusahaan")
+  heroImage    String?
+
+  // Hero video fields
+  heroVideoPath  String? // Uploaded hero video
+  heroVideoType  String? // "upload" | "youtube"
+  heroYoutubeUrl String? // YouTube URL for hero
+
+  logoPath     String?
+  primaryColor String  @default("#ED1C24")
+
+  // About text for footer
+  aboutText String @default("Didirikan tahun 1979, PT. Santos Jaya Abadi adalah salah satu perusahaan roasting kopi terbesar di Asia Tenggara dengan merek ikonik Kapal Api.")
+
+  // Social media URLs
+  instagramUrl String?
+  linkedinUrl  String?
+  facebookUrl  String?
+  twitterUrl   String?
+  youtubeUrl   String?
+
+  // Comment moderation settings
+  commentAutoApprove  Boolean @default(false)
+  commentRequireEmail Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model ActivityLog {
+  id         String  @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String
+  changes    String?
+
+  // Enhanced tracking fields
+  ipAddress String?
+  userAgent String?
+  severity  LogSeverity @default(INFO)
+
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([severity])
+  @@map("activity_logs")
+}
+
+// Media Library for image gallery
+model MediaLibrary {
+  id         String   @id @default(cuid())
+  filename   String
+  url        String
+  mimeType   String
+  size       Int
+  alt        String?
+  uploadedAt DateTime @default(now())
+
+  @@index([uploadedAt])
+  @@map("media_library")
+}
+
+// Analytics for tracking views
+model Analytics {
+  id             String   @id @default(cuid())
+  announcementId String?
+  pageViews      Int      @default(1)
+  uniqueVisitors Int      @default(1)
+  date           DateTime @default(now()) @db.Date
+
+  announcement Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, date])
+  @@index([date])
+  @@map("analytics")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+// ============================================
+// NEW ENUMS FOR FEATURE IMPROVEMENTS
+// ============================================
+
+enum LogSeverity {
+  INFO
+  WARNING
+  ERROR
+}
+
+enum ChangeType {
+  CREATE
+  EDIT
+  PUBLISH
+  UNPUBLISH
+  RESTORE
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+}
+
+enum EmailTemplateType {
+  NEWSLETTER
+  NEW_ARTICLE
+  WELCOME
+  UNSUBSCRIBE_CONFIRM
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ============================================
+// NEW MODELS FOR FEATURE IMPROVEMENTS
+// ============================================
+
+// Revision History for Announcements
+model AnnouncementRevision {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  title     String
+  content   String
+  excerpt   String?
+  imagePath String?
+
+  version       Int
+  changeType    ChangeType @default(EDIT)
+  changeSummary String?
+  createdAt     DateTime   @default(now())
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  @@index([announcementId, version])
+  @@index([createdAt])
+  @@map("announcement_revisions")
+}
+
+// Content Approval Workflow
+model ApprovalRequest {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  status      ApprovalStatus @default(PENDING)
+  submittedAt DateTime       @default(now())
+  reviewedAt  DateTime?
+
+  submitterId String
+  submitter   User   @relation("SubmittedBy", fields: [submitterId], references: [id])
+
+  reviewerId String?
+  reviewer   User?   @relation("ReviewedBy", fields: [reviewerId], references: [id])
+
+  reviewNote String?
+
+  @@index([status])
+  @@index([submittedAt])
+  @@map("approval_requests")
+}
+
+// Session Management
+model UserSession {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sessionToken String  @unique
+  ipAddress    String?
+  userAgent    String?
+  deviceInfo   String?
+
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+  expiresAt    DateTime
+  isRevoked    Boolean  @default(false)
+
+  @@index([userId])
+  @@index([sessionToken])
+  @@map("user_sessions")
+}
+
+// Comments System with Self-Relation for Threading
+model Comment {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  authorName  String
+  authorEmail String?
+  content     String
+
+  status      CommentStatus @default(PENDING)
+  moderatedAt DateTime?
+  moderatorId String?
+  moderator   User?         @relation(fields: [moderatorId], references: [id])
+
+  // Self-relation for threading (per integration safety analysis)
+  parentId String?
+  parent   Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("Replies")
+
+  createdAt DateTime @default(now())
+
+  @@index([announcementId, status])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+// Newsletter Subscribers
+model NewsletterSubscriber {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String?
+  isActive         Boolean   @default(true)
+  subscribedAt     DateTime  @default(now())
+  unsubscribedAt   DateTime?
+  unsubscribeToken String    @unique @default(cuid())
+  source           String?
+
+  @@index([isActive])
+  @@map("newsletter_subscribers")
+}
+
+// Email Templates
+model EmailTemplate {
+  id          String            @id @default(cuid())
+  name        String            @unique
+  slug        String            @unique
+  subject     String
+  htmlContent String            @db.Text
+  textContent String?           @db.Text
+  variables   Json?
+  type        EmailTemplateType
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("email_templates")
+}
+
+// Email Logs
+model EmailLog {
+  id             String      @id @default(cuid())
+  recipientEmail String
+  recipientName  String?
+  templateId     String?
+  templateName   String
+  subject        String
+  status         EmailStatus @default(PENDING)
+  sentAt         DateTime?
+  failedAt       DateTime?
+  errorMessage   String?
+  announcementId String?
+  createdAt      DateTime    @default(now())
+
+  @@index([recipientEmail])
+  @@index([status])
+  @@index([createdAt])
+  @@map("email_logs")
+}
+
+// Email Settings (Internal SMTP)
+model EmailSettings {
+  id Int @id @default(1)
+
+  // Internal SMTP Configuration
+  smtpHost   String  @default("localhost")
+  smtpPort   Int     @default(25)
+  smtpSecure Boolean @default(false)
+  smtpUser   String?
+  smtpPass   String?
+
+  // Sender info
+  fromName     String  @default("Santos Jaya Abadi News")
+  fromEmail    String  @default("news@santosjayaabadi.co.id")
+  replyToEmail String?
+
+  // Auto-send settings
+  autoSendNewArticle Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("email_settings")
+}

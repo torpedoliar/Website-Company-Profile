@@ -1,0 +1,7 @@
+{
+    "version": "2.3.1",
+    "buildDate": "2026-01-08",
+    "schemaVersion": "6",
+    "releaseNotes": "Fix: Media Library buttons no longer trigger form validation popup",
+    "repository": "https://github.com/torpedoliar/Anouncement-Dashboard-Local"
+}
